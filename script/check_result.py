@@ -8,27 +8,44 @@ import sys
 # print(str(sys.argv[1]))
 
 #file_name = "../dataset/"+str(sys.argv[1])+"/points_on_road.txt"
-file_name = "83_2_all_radar_gps_r.txt"
-p_r = np.loadtxt(file_name, delimiter=',')
+file_name_lai = "83_3_lai_radar_gps_r.txt"
+lai_r = np.loadtxt(file_name_lai, delimiter=',')
 
-delay_t = 1
-delta_r = 3
+file_name_qu = "83_3_qu_radar_gps_r.txt"
+qu_r = np.loadtxt(file_name_qu, delimiter=',')
 
-# radar_r = p_r[delay_t:, 0]
-# gps_r = p_r[:-delay_t, 1]
+delay_t = 3
+delta_r = 1.9
 
-radar_r = p_r[:, 0] +delta_r
-gps_r = p_r[:, 1]
+# delay_t = 3     #83_2
+# delta_r = 1.9
 
-error_r = radar_r - gps_r
+# delay_t = 4     #83_3
+#delta_r = 1.9      
 
-error_r_np = np.array(error_r)
-err = error_r_np.sum() / len(error_r)
-print("avg_err:", err)
 
-length = range(len(radar_r))
-plt.plot(length, radar_r, 'r*-', label = 'radar_r')
-plt.plot(length, gps_r, 'g+-', label = 'gps_r')
+lai_radar = np.array(lai_r[delay_t:, 0] + delta_r)
+qu_radar = np.array(qu_r[delay_t:, 0] + delta_r)
+
+lai_gps = np.array(lai_r[:(len(lai_r)-delay_t), 1])
+qu_gps = np.array(qu_r[:(len(qu_r)-delay_t), 1])
+
+
+all_gps = np.append(lai_gps, qu_gps)
+all_radar = np.append(lai_radar, qu_radar)
+
+error_r =  all_radar - all_gps
+error_r_abs = np.abs(all_radar - all_gps)
+
+avg_err = error_r.sum() / len(error_r)
+avg_err_abs = error_r_abs.sum()/ len(error_r)
+print("avg_err:", avg_err)
+print("avg_err_abs: ", avg_err_abs)
+
+length = range(len(all_radar))
+plt.plot(length, all_radar, 'r*-', label = 'radar_r')
+plt.plot(length, all_gps, 'g+-', label = 'gps_r')
+plt.legend()
 plt.show()
 
 

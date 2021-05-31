@@ -19,3 +19,6 @@ LINK_LIBRARIES(libGeographicc)
 
 add_executable(check_rtk_radar src/check_rtk_radar.cpp)
 target_link_libraries(check_rtk_radar libGeographicc ${OpenCV_LIBS})
+
+add_executable(match_rtk_radar src/match_rtk_radar.cpp)
+target_link_libraries(match_rtk_radar libGeographicc ${OpenCV_LIBS})

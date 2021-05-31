@@ -56,17 +56,6 @@ CMAKE_BINARY_DIR = "/home/wulei/new_projec t/build"
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/opt/cmake-3.14.5-Linux-x86_64/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
@@ -77,6 +66,17 @@ edit_cache:
 edit_cache/fast: edit_cache
 
 .PHONY : edit_cache/fast
+
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/opt/cmake-3.14.5-Linux-x86_64/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -123,6 +123,19 @@ check_rtk_radar/fast:
 	$(MAKE) -f CMakeFiles/check_rtk_radar.dir/build.make CMakeFiles/check_rtk_radar.dir/build
 .PHONY : check_rtk_radar/fast
 
+#=============================================================================
+# Target rules for targets named match_rtk_radar
+
+# Build rule for target.
+match_rtk_radar: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 match_rtk_radar
+.PHONY : match_rtk_radar
+
+# fast build rule for target.
+match_rtk_radar/fast:
+	$(MAKE) -f CMakeFiles/match_rtk_radar.dir/build.make CMakeFiles/match_rtk_radar.dir/build
+.PHONY : match_rtk_radar/fast
+
 src/check_rtk_radar.o: src/check_rtk_radar.cpp.o
 
 .PHONY : src/check_rtk_radar.o
@@ -150,18 +163,49 @@ src/check_rtk_radar.cpp.s:
 	$(MAKE) -f CMakeFiles/check_rtk_radar.dir/build.make CMakeFiles/check_rtk_radar.dir/src/check_rtk_radar.cpp.s
 .PHONY : src/check_rtk_radar.cpp.s
 
+src/match_rtk_radar.o: src/match_rtk_radar.cpp.o
+
+.PHONY : src/match_rtk_radar.o
+
+# target to build an object file
+src/match_rtk_radar.cpp.o:
+	$(MAKE) -f CMakeFiles/match_rtk_radar.dir/build.make CMakeFiles/match_rtk_radar.dir/src/match_rtk_radar.cpp.o
+.PHONY : src/match_rtk_radar.cpp.o
+
+src/match_rtk_radar.i: src/match_rtk_radar.cpp.i
+
+.PHONY : src/match_rtk_radar.i
+
+# target to preprocess a source file
+src/match_rtk_radar.cpp.i:
+	$(MAKE) -f CMakeFiles/match_rtk_radar.dir/build.make CMakeFiles/match_rtk_radar.dir/src/match_rtk_radar.cpp.i
+.PHONY : src/match_rtk_radar.cpp.i
+
+src/match_rtk_radar.s: src/match_rtk_radar.cpp.s
+
+.PHONY : src/match_rtk_radar.s
+
+# target to generate assembly for a file
+src/match_rtk_radar.cpp.s:
+	$(MAKE) -f CMakeFiles/match_rtk_radar.dir/build.make CMakeFiles/match_rtk_radar.dir/src/match_rtk_radar.cpp.s
+.PHONY : src/match_rtk_radar.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
-	@echo "... rebuild_cache"
-	@echo "... check_rtk_radar"
 	@echo "... edit_cache"
+	@echo "... check_rtk_radar"
+	@echo "... rebuild_cache"
+	@echo "... match_rtk_radar"
 	@echo "... src/check_rtk_radar.o"
 	@echo "... src/check_rtk_radar.i"
 	@echo "... src/check_rtk_radar.s"
+	@echo "... src/match_rtk_radar.o"
+	@echo "... src/match_rtk_radar.i"
+	@echo "... src/match_rtk_radar.s"
 .PHONY : help
 
 

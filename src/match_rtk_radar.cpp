@@ -13,8 +13,6 @@ using namespace cv;
 using namespace std;
 
 
-
-
 void readGPSData(std::string fileName, std::vector<GPSinsData>& gps_datas, 
                                       char separator, GeographicLib::LocalCartesian& global_gps_trans)
 {
@@ -184,28 +182,40 @@ double triangleArea(cv::Point2f p1, cv::Point2f p2, cv::Point2f p3)
 }
 //target_point为需要判断的点
 //vertex_four要按照顺时针或者逆时针的顺序给定，且个数为4
-bool isInQuadrangle(const cv::Point2f& target_point, 
-                                            const std::vector<cv::Point2f>& vertex_four) 
-                                            
+bool isInROI(const cv::Point2f& target_point, 
+                                            const std::vector<cv::Point2f>& vertex_points)                              
 {
-        cv::Point2f A, B, C, D;
-        if(vertex_four.size() ==4)
-        {
-                A = vertex_four[0];
-                B = vertex_four[1];
-                C = vertex_four[2];
-                D = vertex_four[3];
-        }
-        else
+        if(vertex_points.size() != 3 && vertex_points.size() != 4)
         {
                 std::cout<<"input vertex point size is not four!!"<<std::endl;
                 return false;
         }
 
-        double dTriangle   = triangleArea(A, B, target_point) + triangleArea(B, C, target_point) 
-                                                + triangleArea(C, D, target_point) + triangleArea(D, A, target_point);
-        double dQuadrangle = triangleArea(A, B, C) + triangleArea(A, D, C);// s5 + s6;
-        if(fabs(dTriangle - dQuadrangle)<1)    //说明理论上应该是相等的，但因为计算本身的原因可能会有细微不同，所以选择小于1，根据实际情况来设置
+        double area_ROI = 0.0;
+        double area_target = 0.0;
+        if(vertex_points.size() ==4)
+        {
+                cv::Point2f A, B, C, D;
+                A = vertex_points[0];
+                B = vertex_points[1];
+                C = vertex_points[2];
+                D = vertex_points[3];
+                area_target = triangleArea(A, B, target_point) + triangleArea(B, C, target_point) 
+                                        + triangleArea(C, D, target_point) + triangleArea(D, A, target_point);
+                area_ROI = triangleArea(A, B, C) + triangleArea(A, D, C);
+        }
+        if(vertex_points.size() ==3)
+        {
+                cv::Point2f A, B, C;
+                A = vertex_points[0];
+                B = vertex_points[1];
+                C = vertex_points[2];
+                area_target = triangleArea(A, B, target_point) + triangleArea(B, C, target_point) 
+                                        + triangleArea(C, A, target_point);
+                area_ROI = triangleArea(A, B, C);
+        }
+       
+        if(fabs(area_target - area_ROI)<1)    //说明理论上应该是相等的，但因为计算本身的原因可能会有细微不同，所以选择小于1，根据实际情况来设置
         {
         return true;
         }
@@ -217,7 +227,9 @@ bool isInQuadrangle(const cv::Point2f& target_point,
 
 int main()
 {
-        std::string config_file = "../config.yaml";
+        std::string rtk_radar_out = "matched_rtk_radar_trajectory_all.txt";
+        std::fstream fout_all(rtk_radar_out, std::fstream::out);
+        std::string config_file = "../config/match_config.yaml";
         cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
         if (!fsSettings.isOpened())
         {
@@ -268,11 +280,13 @@ int main()
         }
         
         //读取rtk和radar数据
-        std::string rtk_file = "../data/rtk.txt";
+        std::string rtk_file;
+        fsSettings["rtk_file"] >> rtk_file;
         std::vector<GPSinsData> gps_datas;
         readGPSData(rtk_file, gps_datas, ',', global_gps_trans);
 
-        std::string radar_path = "../data/radar/";
+        std::string radar_path;
+        fsSettings["radar_path"] >> radar_path;
         std::vector<cv::String> radar_files;
 
         cv::glob(radar_path + "*.txt", radar_files);
@@ -290,7 +304,7 @@ int main()
         {
                 cv::Point2f point_gps(gps_datas[i].x, gps_datas[i].y);
                 //TODO 适应T型路口的情况
-                if(isInQuadrangle(point_gps, vertex_xy))
+                if(isInROI(point_gps, vertex_xy))
                 {
                         gps_datas_inROI.push_back(gps_datas[i]);
                 }
@@ -323,20 +337,20 @@ int main()
         std::cout<<"gps_lines.size::   "<<gps_datas_lines.size()<<std::endl;
 
         //处理毫米波数据
-        double Tx = 0.0;            //83_2
-        double Ty = 0.0;
-        double h = 0.0;
-        double yaw_radar = 0.0;
-        fsSettings["Tx"] >> Tx;
-        fsSettings["Ty"] >>Ty;
-        fsSettings["H_radar"] >>h;
-        fsSettings["YAW"] >>yaw_radar;
+        // double Tx = 0.0;            //83_2
+        // double Ty = 0.0;
+        // double h = 0.0;
+        // double yaw_radar = 0.0;
+        // fsSettings["Tx"] >> Tx;
+        // fsSettings["Ty"] >>Ty;
+        // fsSettings["H_radar"] >>h;
+        // fsSettings["YAW"] >>yaw_radar;
         for(int i = 0; i < radar_times_all.size(); i ++)
         {
                 for(int j = 0; j < radar_times_all[i].radar_datas.size(); j++)
                 {
                         RadarData radar_point = radar_times_all[i].radar_datas[j];
-                        trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
+                        //trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
                         //cv::Point2f radar_draw(radar_point.x_in_world *4 +500, radar_point.y_in_world*4 +500);
                         //按ID画毫米波轨迹
                         // if(radar_point.track_id == 5)
@@ -397,8 +411,8 @@ int main()
                         for(int w = 0; w < radar_IDs[m].size(); w++)
                         {
                                 RadarData radar_point = radar_IDs[m][w];
-                                trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
-                                cv::Point2f radar_draw(radar_point.x_in_world *4 +500, radar_point.y_in_world*4 +500);
+                                //trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
+                                //cv::Point2f radar_draw(radar_point.x_in_world *4 +500, radar_point.y_in_world*4 +500);
                                 //cv::circle(img_birdview, radar_draw, 2, cv::Scalar(125,0,0), 1);
                         }
                 }
@@ -488,6 +502,7 @@ int main()
                                 rtk_radar_ID = m;             //track_id 也是m
                         }
                 }
+                //rtk_radar_ID = 5;0
                 // std::cout<<"min_avg_dis: "<<min_avgdis<<std::endl;
                 // std::cout<<"rtk_radar_ID: "<<rtk_radar_ID<<std::endl;
                 int radar_trajectory_length = 0;
@@ -495,20 +510,19 @@ int main()
                 if(rtk_radar_ID != -1 && min_avgdis < 10.0)       //若min_avgdis过大，则匹配失败
                 {
                         match_successful = true;
-                       radar_trajectory_length = radar_trajectorys[rtk_radar_ID].size();
+                        radar_trajectory_length = radar_trajectorys[rtk_radar_ID].size();
                         std::cout<<"matched radar trajectory.length::  "<<radar_trajectory_length<<std::endl;
                         std::cout<<"matched radar trajectory.avgdis::  "<<min_avgdis<<std::endl;
-                        std::string rtk_radar_points = "rtk_radar_trajectory_" + std::to_string(i) + ".txt";
+                        std::string rtk_radar_points = "matched_rtk_radar_trajectory_" + std::to_string(i) + ".txt";
                         std::fstream fout_rtk_radar(rtk_radar_points, std::fstream::out);
                         printf("matched radar ID: %d\n", rtk_radar_ID);
                         //TODO保存正确匹配雷达轨迹中的radar点与对应的rtk点
                         for(int w = 0; w < radar_trajectorys[rtk_radar_ID].size(); w++)
                         {
                                 RadarData radar_point = radar_trajectorys[rtk_radar_ID][w];
-                                trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
-                                //std::cout<<"radar_point_id:  "<<radar_point.track_id<<std::endl;
-                                cv::Point2f radar_draw(radar_point.x_in_world *4 +500, radar_point.y_in_world*4 +500);
-                                cv::circle(img_birdview, radar_draw, 2, cv::Scalar(125,0,0), 1);
+                                // trans_radar_xy(Tx, Ty,h, yaw_radar, radar_point);
+                                // cv::Point2f radar_draw(radar_point.x_in_world *4 +500, radar_point.y_in_world*4 +500);
+                                // cv::circle(img_birdview, radar_draw, 2, cv::Scalar(125,0,0), 1);
                                 
                                 GPSinsData rtk_point_matched;
                                 bool matched_flag = false;
@@ -526,18 +540,20 @@ int main()
                                 {
                                         //std::cout<<"radar_point:"<<radar_point.r<<"  "<<radar_point.angle<<std::endl;
                                         fout_rtk_radar<<std::fixed<<std::setprecision(7);
-
+                                        fout_all<<std::fixed<<std::setprecision(7);
                                         //用于标定的输出
-                                        // fout_rtk_radar << radar_point.r <<", "<<radar_point.angle <<", "<<rtk_point_matched.lat<<", "
-                                        //                                << rtk_point_matched.lon<<", "<<rtk_point_matched.height<<std::endl;
-
+                                        fout_rtk_radar << radar_point.r <<", "<<radar_point.angle <<", "<<rtk_point_matched.lat<<", "
+                                                                       << rtk_point_matched.lon<<", "<<rtk_point_matched.height<<std::endl;
+                                        fout_all << radar_point.r <<", "<<radar_point.angle <<", "<<rtk_point_matched.lat<<", "
+                                                                       << rtk_point_matched.lon<<", "<<rtk_point_matched.height<<std::endl;
                                         //用于rtk与radar时间延迟估计的输出
-                                        double gps_r = sqrt( pow(rtk_point_matched.x-vertex_xy[data_num-1].x, 2) + pow(rtk_point_matched.y - vertex_xy[data_num - 1].y, 2));
-                                        fout_rtk_radar <<radar_point.r<<", "<<gps_r<<std::endl;
+                                        // double gps_r = sqrt( pow(rtk_point_matched.x-vertex_xy[data_num-1].x, 2) + pow(rtk_point_matched.y - vertex_xy[data_num - 1].y, 2));
+                                        // fout_rtk_radar <<radar_point.r<<", "<<gps_r<<std::endl;
                                 }
                                         
                         }
                 }
+                
                 std::string traj_str = std::to_string(i); 
                 cv::putText(img_birdview,traj_str, gps_line_center, 0, 0.6, cv::Scalar(0, 0, 255));
                 std::string avgdis_str;
@@ -553,39 +569,6 @@ int main()
                 }
                 cv::Point2f text_center(10, 20 + 20*i);
                 cv::putText(img_birdview,avgdis_str, text_center, 0, 0.6, cv::Scalar(0, 0, 255)); 
-        
-                
-                //开始的做法：逐点去抽取，复杂度太高，先跟据rtk轨迹时间段，把该时间段的radar数据抽取出来比较合理
-                // for(int j = 0; j < gps_datas_lines[i].size(); j+=6)    //rtk的频率较高
-                // {
-                //         cv::Point2f p_rtk(gps_datas_lines[i][j].x * 4 +500, gps_datas_lines[i][j].y * 4 + 500);
-                //         cv::circle(img_birdview, p_rtk, 2, cv::Scalar(0, 0, 255), -1);
-                //         double rtk_point_time = gps_datas_lines[i][j].time_stamp;
-                //         //对于每一条rtk轨迹提取对应时间的毫米波数据
-                //         for(int n = 0; n < radar_times_all.size(); n ++)
-                //         {
-                //                 //TODO 待验证该时间判断方式是否合理
-                //                 if(radar_times_all[n].time < rtk_point_time && radar_times_all[n].time > rtk_point_time)
-                //                 {
-                //                         std::cout<<"find radar point in the same time with rtk point"<<std::endl;
-                //                         for(int m = 0; m < radar_times_all[n].radar_datas.size(); m++)
-                //                         {
-                //                                 for(int k =0; k < 30; k++)    //30是手动设置的该rtk轨迹对应期间的毫米波总ID数，可调
-                //                                 {
-                //                                         if(radar_times_all[n].radar_datas[m].track_id == k)
-                //                                         {
-                //                                                 radar_IDs[k].push_back(radar_times_all[n].radar_datas[m]);
-                //                                                 break;
-                //                                         }
-
-                //                                 }
-                //                         }
-                //                 }
-                //         }
-                // }
-
-
-                
                 
         }
 
